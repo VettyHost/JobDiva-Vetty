@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vetty + JobDiva Integration Explorer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutral Harmony -->
+    <!-- Application Structure Plan: The SPA uses a linear, "scrolly-telling" structure to guide users through the integration process logically. It starts with a high-level overview and benefits, moves to an interactive workflow diagram that serves as a visual anchor, then provides detailed, toggleable sections for specific features, and concludes with user access and support. This structure was chosen over a dashboard because the goal is to explain a linear process. The interactive diagram connects the visual flow to detailed text, allowing for both guided discovery and specific information retrieval, enhancing comprehension for a client audience. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Core bidirectional workflow. -> Goal: Compare & Explain Flow. -> Viz: Interactive HTML/CSS Diagram. -> Interaction: Clicking arrows/boxes scrolls to and highlights relevant detail sections. -> Justification: Visually simplifies the complex interaction between two systems, making it immediately understandable. -> Method: HTML/Tailwind, JS.
+        - Report Info: Placing Orders, Status Updates, Permissions. -> Goal: Inform & Organize. -> Viz: Tabbed/Toggleable Content Blocks. -> Interaction: User clicks a tab to reveal detailed text. -> Justification: Prevents information overload by breaking down details into digestible, user-selected chunks. -> Method: HTML/Tailwind, JS.
+        - Report Info: Mirrored user permissions. -> Goal: Inform & Compare. -> Viz: Horizontal Bar Chart. -> Interaction: Tooltips on hover provide extra context. -> Justification: Abstract concept of "mirrored permissions" is made concrete and easy to compare visually. -> Method: Chart.js/Canvas.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { 
+            font-family: "Gilroy", Sans-serif;
+            font-size: 19px;
+            font-weight: 500;
+            line-height: 1.4em;
+            letter-spacing: -0.3px;
+            word-spacing: 0.1em;
+            color: #333333; /* Using a dark gray for readability as the variable was not defined */
+        }
+        .active-tab { 
+            background-color: #3B82F6 !important; /* blue-600 */
+            color: #FFFFFF !important;
+        }
+        .flow-arrow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 4px;
+            background-color: #9CA3AF; /* gray-400 */
+        }
+        .flow-arrow::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            right: -1px;
+            transform: translateY(-50%);
+            border: solid #9CA3AF;
+            border-width: 0 4px 4px 0;
+            display: inline-block;
+            padding: 5px;
+            transform: translateY(-50%) rotate(-45deg);
+        }
+        .flow-arrow.left-to-right::after {
+             transform: translateY(-50%) rotate(-45deg);
+        }
+        .flow-arrow.right-to-left {
+            transform: translate(-50%, -50%) rotate(180deg);
+        }
+        .flow-arrow.right-to-left::after {
+            transform: translateY(-50%) rotate(-45deg);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 250px;
+            max-height: 300px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 300px;
+                max-height: 350px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+
+        <header class="text-center mb-12">
+            <div class="flex justify-center items-center space-x-8 mb-6">
+                <div class="h-10 flex items-center">
+                    <img src="https://d2299yata20i8x.cloudfront.net/assets/vetty-full-color-2022-01.png" title="Vetty" alt="Vetty" class="h-full object-contain">
+                </div>
+                <div class="text-3xl font-light text-gray-500">&</div>
+                <div class="h-10 flex items-center">
+                    <img style="cursor: pointer" src="https://4724569.fs1.hubspotusercontent-na1.net/hubfs/4724569/redesign-assets/new-jobdiva-logo.svg" width="135px" height="32px" alt="newLogo">
+                </div>
+            </div>
+            <h1 class="text-4xl md:text-5xl font-bold text-blue-600 mb-2">Bidirectional Integration Explorer</h1>
+            <p class="text-lg text-gray-600 max-w-3xl mx-auto">An interactive guide to the seamless background check workflow between Vetty and JobDiva.</p>
+        </header>
+        
+        <section id="benefits" class="mb-16">
+             <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <h3 class="font-bold text-lg text-blue-600 mb-2">Streamlined Workflow</h3>
+                    <p class="text-gray-600 text-sm">Order checks and get updates directly within JobDiva, eliminating the need to switch platforms.</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <h3 class="font-bold text-lg text-blue-600 mb-2">Real-time Visibility</h3>
+                    <p class="text-gray-600 text-sm">Gain immediate, near real-time insights into the status of every background check order.</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <h3 class="font-bold text-lg text-blue-600 mb-2">Enhanced Control</h3>
+                    <p class="text-gray-600 text-sm">Flexibly customize orders on-the-fly, adding any specific screenings your candidates require.</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <h3 class="font-bold text-lg text-blue-600 mb-2">Consistent Permissions</h3>
+                    <p class="text-gray-600 text-sm">User access is perfectly mirrored between Vetty and JobDiva for a secure, unified experience.</p>
+                </div>
+            </div>
+        </section>
+
+
+        <section id="workflow" class="mb-16 bg-white p-6 md:p-8 rounded-xl shadow-md border border-gray-200">
+            <h2 class="text-3xl font-bold text-center mb-2">The Integration Flow</h2>
+            <p class="text-center text-gray-600 mb-8 max-w-2xl mx-auto">This diagram shows the bidirectional data exchange between the two platforms. Click on a step to see the detailed explanation below.</p>
+            <div class="flex items-center justify-center space-x-4 md:space-x-8">
+                <div class="w-1/3 text-center">
+                    <div class="bg-gray-200 p-6 rounded-lg h-full flex items-center justify-center">
+                        <span class="font-bold text-xl text-gray-700">JobDiva</span>
+                    </div>
+                </div>
+                <div class="w-1/3 text-center relative h-24">
+                    <button onclick="scrollToSection('details', 'order')" class="absolute top-0 left-0 right-0 h-1/2 flex items-center justify-center cursor-pointer group">
+                        <div class="relative w-full">
+                            <div class="flow-arrow left-to-right group-hover:bg-blue-500"></div>
+                             <span class="text-sm bg-white px-2 relative text-gray-600 group-hover:text-blue-600">Place Order</span>
+                        </div>
+                    </button>
+                    <button onclick="scrollToSection('details', 'status')" class="absolute bottom-0 left-0 right-0 h-1/2 flex items-center justify-center cursor-pointer group">
+                         <div class="relative w-full">
+                           <div class="flow-arrow right-to-left group-hover:bg-blue-500"></div>
+                             <span class="text-sm bg-white px-2 relative text-gray-600 group-hover:text-blue-600">Get Status</span>
+                        </div>
+                    </button>
+                </div>
+                <div class="w-1/3 text-center">
+                    <div class="bg-blue-100 p-6 rounded-lg h-full flex items-center justify-center border border-blue-200">
+                        <span class="font-bold text-xl text-blue-800">Vetty</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="details" class="mb-16">
+            <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+                <div class="flex flex-col md:flex-row border-b border-gray-200">
+                    <button id="tab-order" onclick="switchTab('order')" class="tab-button flex-1 p-4 text-lg font-semibold text-gray-600 bg-gray-100 hover:bg-blue-500 hover:text-white transition active-tab">1. Placing an Order</button>
+                    <button id="tab-status" onclick="switchTab('status')" class="tab-button flex-1 p-4 text-lg font-semibold text-gray-600 bg-gray-100 hover:bg-blue-500 hover:text-white transition">2. Receiving Status Updates</button>
+                    <button id="tab-permissions" onclick="switchTab('permissions')" class="tab-button flex-1 p-4 text-lg font-semibold text-gray-600 bg-gray-100 hover:bg-blue-500 hover:text-white transition">3. User Access & Permissions</button>
+                </div>
+
+                <div id="content-order" class="tab-content p-6 md:p-8">
+                    <h3 class="text-2xl font-bold text-blue-700 mb-4">Ordering Directly From JobDiva</h3>
+                    <img
+                        src="https://blogger.googleusercontent.com/img/a/AVvXsEhUvU4nTn2lZ1uUmseNb4Rh302zGEsIz39WQP8QFns0WTR319CBm7Aj4oCcOwdfiPOM89dWrrY673g50CNLIT8kg7cAtNDdnaCL_XX6m-3ciedCz0SPEI_1YXoQASQPlChG3gyQv0xqoglEr4Vy0fCHobT4bfgJbxgDTcnyj5ira_fdVoVD2YzjaD5IvhzB"
+                        width="1365"
+                        height="586"
+                        style="max-width: 100%; height: auto; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges;"
+                        alt="High Quality Image"
+                        class="rounded-lg shadow-md mb-6"
+                    />
+                    <p class="text-gray-700 mb-6">The Vetty integration is deeply embedded within JobDiva, accessible via a dedicated "Vetty Screening" tab at the candidate level. This allows your team to initiate background check orders with unparalleled ease, directly from the system you use every day.</p>
+                    <ul class="space-y-4">
+                        <li class="flex items-start">
+                            <span class="text-blue-500 mr-3 mt-1">✓</span>
+                            <div><strong class="font-semibold text-gray-800">Direct Ordering:</strong> Place background check orders from a candidate's profile in JobDiva, removing the need to log into the Vetty portal separately.</div>
+                        </li>
+                        <li class="flex items-start">
+                             <span class="text-blue-500 mr-3 mt-1">✓</span>
+                            <div><strong class="font-semibold text-gray-800">Flexible Configuration:</b> Select the specific department, location, and pre-configured package for each order.</div>
+                        </li>
+                        <li class="flex items-start">
+                             <span class="text-blue-500 mr-3 mt-1">✓</span>
+                            <div><strong class="font-semibold text-gray-800">Total Customization:</strong> Add additional background checks or health screenings that may not be part of the standard package.</div>
+                        </li>
+                        <li class="flex items-start">
+                             <span class="text-blue-500 mr-3 mt-1">✓</span>
+                            <div><strong class="font-semibold text-gray-800">Review & Edit:</b> Confirm details like address searches and lookback periods before final submission.</div>
+                        </li>
+                    </ul>
+                </div>
+
+                <div id="content-status" class="tab-content p-6 md:p-8 hidden">
+                    <h3 class="text-2xl font-bold text-blue-700 mb-4">Real-Time Status in JobDiva</h3>
+                    <img
+                        src="https://blogger.googleusercontent.com/img/a/AVvXsEiTnYbkam8P1ojpClwQ8pAQgp5hHvCbVSUKon5I6BPdXmKfR__VBXtG7-zdQWz4JrX82Zj9ZH7qd2bdnSOwTRrKg8DUwVlbXFfvB568sADNcSPfHULFIkz_t-C-7V-9M11o7DX-kx23F0N6EAGO5Wv5RdF0_XXf_2PPnLNJ5eCrwNMrJE0KZdTptuwvOHhL"
+                        width="1364"
+                        height="596"
+                        style="max-width: 100%; height: auto; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges;"
+                        alt="High Quality Image"
+                        class="rounded-lg shadow-md mb-6"
+                    />
+                    <p class="text-gray-700 mb-6">Once an order is placed, the integration ensures that you are always up-to-date with its progress without ever leaving JobDiva. This keeps your team informed and efficient.</p>
+                     <ul class="space-y-4">
+                        <li class="flex items-start">
+                            <span class="text-blue-500 mr-3 mt-1">✓</span>
+                            <div><strong class="font-semibold text-gray-800">Near Real-time Updates:</strong> The overall order status is updated from Vetty to JobDiva in near real-time, providing immediate visibility into the background check process.</div>
+                        </li>
+                        <li class="flex items-start">
+                             <span class="text-blue-500 mr-3 mt-1">✓</span>
+                            <div><strong class="font-semibold text-gray-800">Quick Access to Vetty:</strong> A convenient quick link is available within JobDiva, allowing users to directly open the candidate's comprehensive profile in the Vetty portal for more detailed information when needed.</div>
+                        </li>
+                    </ul>
+                </div>
+
+                <div id="content-permissions" class="tab-content p-6 md:p-8 hidden">
+                    <h3 class="text-2xl font-bold text-blue-700 mb-4">Mirrored Access for Security and Simplicity</h3>
+                    <p class="text-gray-700 mb-6">To ensure a secure and consistent experience, user permissions are meticulously managed and synchronized between both platforms. A user's access in JobDiva is a direct reflection of their permissions in Vetty.</p>
+                     <div class="chart-container mb-6">
+                        <canvas id="permissionsChart"></canvas>
+                    </div>
+                    <ul class="space-y-4">
+                        <li class="flex items-start">
+                             <span class="text-blue-500 mr-3 mt-1">✓</span>
+                            <div><strong class="font-semibold text-gray-800">Single Identity:</strong> Users must be registered on Vetty using the exact same email address as their JobDiva account.</div>
+                        </li>
+                        <li class="flex items-start">
+                             <span class="text-blue-500 mr-3 mt-1">✓</span>
+                            <div><strong class="font-semibold text-gray-800">Mirrored Permissions:</strong> Access to departments, locations, and packages directly mirrors the user's permissions in Vetty.</div>
+                        </li>
+                        <li class="flex items-start">
+                           <span class="text-blue-500 mr-3 mt-1">✓</span>
+                            <div><strong class="font-semibold text-gray-800">Guaranteed Consistency:</strong> If a user cannot access a resource in Vetty, they are automatically restricted from accessing it via the JobDiva integration.</div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <footer id="support" class="text-center bg-blue-600 text-white p-8 rounded-xl">
+             <h2 class="text-2xl font-bold mb-2">Need Assistance?</h2>
+             <p class="mb-4 max-w-xl mx-auto">If you cannot access the Vetty tab in JobDiva, or if your user profile requires creation or updates, please reach out to <strong class="text-white">support@vetty.co</strong> for assistance.</p>
+             <a href="mailto:support@vetty.co" class="bg-white text-blue-600 font-bold py-2 px-6 rounded-full hover:bg-gray-100 transition inline-block">Contact the Vetty Team</a>
+        </footer>
+
+    </div>
+
+    <script>
+        const tabs = ['order', 'status', 'permissions'];
+        const tabButtons = {};
+        const tabContents = {};
+
+        tabs.forEach(tab => {
+            tabButtons[tab] = document.getElementById(`tab-${tab}`);
+            tabContents[tab] = document.getElementById(`content-${tab}`);
+        });
+
+        function switchTab(activeTab) {
+            tabs.forEach(tab => {
+                const is_active = tab === activeTab;
+                tabButtons[tab].classList.toggle('active-tab', is_active);
+                tabContents[tab].classList.toggle('hidden', !is_active);
+            });
+            if (activeTab === 'permissions') {
+                renderPermissionsChart();
+            }
+        }
+
+        function scrollToSection(sectionId, tabToActivate) {
+            document.getElementById(sectionId).scrollIntoView({ behavior: 'smooth' });
+            if (tabToActivate) {
+                switchTab(tabToActivate);
+            }
+        }
+
+        let permissionsChartInstance = null;
+        function renderPermissionsChart() {
+            if (permissionsChartInstance) {
+                return;
+            }
+            const ctx = document.getElementById('permissionsChart').getContext('2d');
+            permissionsChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Package Access', 'Location Access', 'Department Access'],
+                    datasets: [
+                        {
+                            label: 'JobDiva Access',
+                            data: [100, 100, 100],
+                            backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Vetty Permissions',
+                            data: [100, 100, 100],
+                            backgroundColor: 'rgba(165, 207, 255, 0.7)',
+                            borderColor: 'rgba(165, 207, 255, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Permissions are Mirrored Between Platforms'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Access is identical in both systems.';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                           display: false,
+                            max: 110
+                        },
+                        y: {
+                           grid: {
+                               display: false
+                           }
+                        }
+                    }
+                }
+            });
+        }
+
+        // timeSavingsChartInstance and renderTimeSavingsChart function are no longer needed
+        // as the ROI section has been removed.
+        
+        switchTab('order');
+        // No call to renderTimeSavingsChart() here anymore
+    </script>
+
+</body>
+</html>
