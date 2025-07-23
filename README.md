@@ -1,1 +1,0 @@
-# JobDiva-Vetty
